@@ -1,19 +1,435 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Text to PDF</title>
-  </head>
-  <body>
-    <h1>Enter text to include in PDF</h1>
-    <form method="post">
-      <div>
-        <textarea name="text" rows="15" cols="80" placeholder="Type text here..."></textarea>
-      </div>
-      <div>
-        <button type="submit">Generate PDF</button>
-      </div>
-    </form>
-  </body>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Q&A Assistant - Powered by Perplexity</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: #667eea;
+            color: white;
+            margin-left: 20px;
+            text-align: right;
+        }
+
+        .ai-message {
+            background: #e8f0fe;
+            color: #333;
+            margin-right: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .message-content {
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .download-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .download-btn:hover {
+            background: #45a049;
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+        }
+
+        textarea {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: none;
+            max-height: 100px;
+            min-height: 50px;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: background 0.3s, transform 0.2s;
+            white-space: nowrap;
+        }
+
+        .send-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .info-text {
+            text-align: center;
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        function QAAssistant() {
+            const [messages, setMessages] = useState([]);
+            const [question, setQuestion] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages]);
+
+            const handleAsk = async (e) => {
+                e.preventDefault();
+
+                if (!question.trim()) {
+                    setError('Please enter a question');
+                    return;
+                }
+
+                // Add user message
+                const newMessages = [
+                    ...messages,
+                    { type: 'user', content: question, id: Date.now() }
+                ];
+                setMessages(newMessages);
+                setQuestion('');
+                setError('');
+                setLoading(true);
+
+                try {
+                    const response = await fetch('/api/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ question: question })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to get answer');
+                    }
+
+                    const data = await response.json();
+
+                    // Add AI response
+                    setMessages([
+                        ...newMessages,
+                        {
+                            type: 'ai',
+                            content: data.answer,
+                            question: data.question,
+                            id: Date.now() + 1
+                        }
+                    ]);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleDownloadPDF = async (questionText, answerText) => {
+                try {
+                    const response = await fetch('/api/download-pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            question: questionText,
+                            answer: answerText
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to download PDF');
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qa_${new Date().getTime()}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } catch (err) {
+                    setError('Failed to download PDF: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🤖 AI Q&A Assistant</h1>
+                        <p>Ask any question and get instant answers powered by Perplexity AI</p>
+                    </div>
+
+                    <div className="chat-container">
+                        <div className="messages-area">
+                            {messages.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">💬</div>
+                                    <p>Start by asking a question below...</p>
+                                </div>
+                            ) : (
+                                messages.map((msg) => (
+                                    <div key={msg.id} className={`message ${msg.type}-message`}>
+                                        <div className="message-header">
+                                            {msg.type === 'user' ? '👤 You' : '🤖 AI Assistant'}
+                                        </div>
+                                        <div className="message-content">{msg.content}</div>
+                                        {msg.type === 'ai' && (
+                                            <div className="message-actions">
+                                                <button
+                                                    className="download-btn"
+                                                    onClick={() =>
+                                                        handleDownloadPDF(msg.question, msg.content)
+                                                    }
+                                                >
+                                                    📥 Download PDF
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+
+                            {loading && (
+                                <div className="loading-message">
+                                    <div className="loading-spinner"></div>
+                                    <span>Getting answer from Perplexity AI...</span>
+                                </div>
+                            )}
+
+                            {error && <div className="error-message">⚠️ {error}</div>}
+
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <form onSubmit={handleAsk} className="input-area">
+                            <div className="input-wrapper">
+                                <textarea
+                                    value={question}
+                                    onChange={(e) => setQuestion(e.target.value)}
+                                    placeholder="Ask anything... (e.g., What is machine learning?)"
+                                    disabled={loading}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey) {
+                                            handleAsk(e);
+                                        }
+                                    }}
+                                />
+                                <div className="info-text">Ctrl+Enter to send</div>
+                            </div>
+                            <button
+                                type="submit"
+                                className="send-btn"
+                                disabled={loading}
+                            >
+                                {loading ? '⏳ Waiting...' : '📤 Send'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(
+            <QAAssistant />
+        );
+    </script>
+</body>
 </html>
