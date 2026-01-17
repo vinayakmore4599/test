@@ -771,6 +771,145 @@ git commit -m "Remove sensitive files from git tracking"
 git push origin main
 ```
 
+## Step 13: Using git filter-branch to Clean History
+
+### When to Use filter-branch
+
+`git filter-branch` rewrites Git history to permanently remove files from all past commits. Use this when:
+
+- Secrets (API keys, passwords) are already in your commit history
+- Large files were committed and need to be removed
+- Sensitive files were pushed to remote repository
+- `.gitignore` alone won't help (it only prevents future commits)
+
+### How filter-branch Works
+
+```bash
+git filter-branch --tree-filter 'rm -f FILE_PATH' HEAD
+```
+
+This command:
+1. Goes through every commit in history (`HEAD`)
+2. Removes the specified file from each commit
+3. Rewrites the entire commit history
+4. Preserves all other changes
+
+### Complete Workflow: Remove Secrets from History
+
+#### Step 1: Remove File from All Commits
+
+```bash
+# Remove single file
+git filter-branch --tree-filter 'rm -f k8s/secret.yaml' HEAD
+
+# Remove multiple files
+git filter-branch --tree-filter 'rm -f .env.example k8s/secret.yaml credentials.json' HEAD
+```
+
+#### Step 2: Verify Files Are Removed
+
+```bash
+# Check git history for the file
+git log --all --full-history -- k8s/secret.yaml
+
+# Should show no results (file completely removed)
+```
+
+#### Step 3: Update .gitignore
+
+```bash
+# Add files to .gitignore
+echo "k8s/secret.yaml" >> .gitignore
+echo ".env.example" >> .gitignore
+
+# Stage and commit
+git add .gitignore
+git commit -m "Add sensitive files to .gitignore"
+```
+
+#### Step 4: Force Push to Remote
+
+```bash
+# Replace remote history with cleaned local history
+git push --force-with-lease
+```
+
+- `--force-with-lease` is safer than `--force` (checks remote hasn't changed)
+- Only use if no one else has pulled the old commits
+
+### Example: Remove API Keys
+
+```bash
+# 1. Remove secret files from all commits
+git filter-branch --tree-filter 'rm -f k8s/secret.yaml .env api-keys.json' HEAD
+
+# 2. Add to .gitignore
+cat >> .gitignore << EOF
+k8s/secret.yaml
+.env
+api-keys.json
+EOF
+
+# 3. Commit the gitignore update
+git add .gitignore
+git commit -m "Add sensitive files to .gitignore and remove from history"
+
+# 4. Force push to remote
+git push --force-with-lease
+```
+
+### Important Notes
+
+- **Affects all developers** - Anyone who has cloned/pulled needs to re-fetch
+- **Irreversible** - Once pushed, history is rewritten on remote
+- **Coordinate with team** - Tell team members before force pushing
+- **Backup first** - Create backup branch before filter-branch: `git branch backup`
+- **Test safely** - Run on local copy first to verify it works
+
+### Alternative: git filter-repo (Modern Approach)
+
+`git filter-repo` is a newer, more efficient tool:
+
+```bash
+# Install (requires git-filter-repo)
+pip install git-filter-repo
+
+# Remove files
+git filter-repo --invert-paths --paths k8s/secret.yaml --paths .env
+
+# Force push
+git push --force-with-lease
+```
+
+**Advantages over filter-branch:**
+- Faster and more efficient
+- Better handling of large repositories
+- More intuitive syntax
+
+### After Force Push
+
+Notify team members to clean up their local copies:
+
+```bash
+# Team members should run:
+git fetch origin
+git reset --hard origin/main
+```
+
+### Verify Secrets Are Gone
+
+```bash
+# Search entire history for sensitive patterns
+git log -p | grep -i "api_key\|password\|secret"
+
+# Should return nothing if successfully removed
+
+# Or check specific file across all history
+git log --all --full-history -- k8s/secret.yaml
+
+# Should show: "fatal: Path 'k8s/secret.yaml' does not exist"
+```
+
 ## Essential Commands Quick Reference
 
 | Command | Purpose |
