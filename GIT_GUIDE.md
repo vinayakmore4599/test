@@ -331,6 +331,143 @@ git revert commit-hash
 
 Creates a new commit that undoes the changes.
 
+## Step 11: Protecting Sensitive Files
+
+### Add Files to .gitignore
+
+Edit your `.gitignore` file and add sensitive files:
+
+```
+# Kubernetes Secrets (DO NOT COMMIT)
+k8s/secret.yaml
+
+# Environment Variables
+.env
+.env.local
+
+# API Keys
+api-keys.json
+credentials.txt
+```
+
+### Remove Files Already Tracked by Git
+
+If you accidentally committed a sensitive file, remove it from git tracking:
+
+```bash
+# Remove file from git tracking (keeps file locally)
+git rm --cached k8s/secret.yaml
+
+# Or remove multiple files
+git rm --cached k8s/secret.yaml .env api-keys.json
+```
+
+### Update .gitignore
+
+```bash
+# Stage the .gitignore update
+git add .gitignore
+
+# Commit the change
+git commit -m "Chore: Add sensitive files to .gitignore"
+
+# Push to remote
+git push origin main
+```
+
+### Complete Workflow for Protecting Secrets
+
+```bash
+# 1. Add sensitive file to .gitignore
+echo "k8s/secret.yaml" >> .gitignore
+
+# 2. Remove from git tracking
+git rm --cached k8s/secret.yaml
+
+# 3. Stage changes
+git add .gitignore
+
+# 4. Commit
+git commit -m "Chore: Add k8s/secret.yaml to .gitignore to protect API keys"
+
+# 5. Push to remote
+git push origin main
+```
+
+### Create Example/Template Files
+
+Instead of committing secrets, create example files:
+
+```bash
+# Create template files
+cp k8s/secret.yaml k8s/secret.yaml.example
+```
+
+Content of `k8s/secret.yaml.example`:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flask-app-secret
+  namespace: flask-app
+type: Opaque
+stringData:
+  PERPLEXITY_API_KEY: "YOUR_API_KEY_HERE"  # Replace with actual key
+```
+
+Then add to .gitignore:
+```
+k8s/secret.yaml
+.env
+api-keys.json
+```
+
+And commit the example files:
+```bash
+git add k8s/secret.yaml.example
+git commit -m "Docs: Add secret.yaml.example as template"
+git push origin main
+```
+
+## Step 10: Undo Changes
+
+### Undo Unstaged Changes
+
+```bash
+git restore filename.txt
+```
+
+Or older syntax:
+```bash
+git checkout -- filename.txt
+```
+
+### Undo Staged Changes
+
+```bash
+git restore --staged filename.txt
+```
+
+### Undo Last Commit (Keep Changes)
+
+```bash
+git reset --soft HEAD~1
+```
+
+### Undo Last Commit (Discard Changes)
+
+```bash
+git reset --hard HEAD~1
+```
+
+### Revert a Specific Commit
+
+```bash
+git revert commit-hash
+```
+
+Creates a new commit that undoes the changes.
+
 ## Complete Workflow Example
 
 Here's a typical workflow from start to finish:
