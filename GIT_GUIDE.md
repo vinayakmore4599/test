@@ -598,6 +598,179 @@ git revert commit-hash
 git push origin main
 ```
 
+### Secrets Already in Git History
+
+If you added sensitive files (API keys, passwords, etc.) and they're already in your commit history, `.gitignore` alone won't help. You need to remove them from history.
+
+#### Remove Secrets from Commits
+
+Remove file from git tracking:
+```bash
+git rm --cached k8s/secret.yaml
+```
+
+Or remove multiple sensitive files:
+```bash
+git rm --cached .env k8s/secret.yaml api-keys.json
+```
+
+#### Update .gitignore and Amend Commit
+
+```bash
+# Add files to .gitignore
+echo "k8s/secret.yaml" >> .gitignore
+echo ".env" >> .gitignore
+
+# Stage changes
+git add .gitignore
+
+# Amend the last commit (combine changes)
+git commit --amend --no-edit
+
+# Force push to update remote (use with caution)
+git push --force-with-lease
+```
+
+#### Complete Workflow to Clean Secrets
+
+```bash
+# 1. Remove secrets from tracking
+git rm --cached k8s/secret.yaml
+
+# 2. Add to .gitignore
+echo "k8s/secret.yaml" >> .gitignore
+
+# 3. Commit the changes
+git add .gitignore
+git commit -m "Remove secrets from history and add to .gitignore"
+
+# 4. Force push to update remote
+git push --force-with-lease
+```
+
+#### Important Notes on Force Push
+
+- `git push --force-with-lease` is safer than `--force` (checks remote hasn't changed)
+- Only force push if you're sure no one else has pulled those commits
+- For team repositories, coordinate with team members before force pushing
+- On shared main branch, communicate first
+
+#### Create Secret Template Files
+
+Instead of tracking actual secrets, commit template files:
+
+```bash
+# Create template file
+cp k8s/secret.yaml k8s/secret.yaml.example
+
+# Edit template with placeholder values
+# Example content:
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: flask-app-secret
+# stringData:
+#   PERPLEXITY_API_KEY: "YOUR_API_KEY_HERE"
+
+# Add template to git
+git add k8s/secret.yaml.example
+
+# Add actual secret to .gitignore
+echo "k8s/secret.yaml" >> .gitignore
+git add .gitignore
+
+# Commit
+git commit -m "Add secret.yaml.example template and exclude actual secrets"
+
+# Push
+git push origin main
+```
+
+#### Verify Secrets Are Removed
+
+Check that sensitive files are no longer in git:
+```bash
+# Search git history for common secret patterns
+git log -p | grep -i "api_key\|password\|secret"
+
+# Or use git-secrets tool
+git secrets --scan
+```
+
+## Step 12: Check Tracked Files
+
+### View All Tracked Files
+
+List all files currently tracked by git:
+
+```bash
+git ls-files
+```
+
+### View Tracked Files in Specific Directory
+
+```bash
+# Check what files are tracked in k8s/ directory
+git ls-files k8s/
+
+# Check what files are tracked in src/ directory
+git ls-files src/
+```
+
+### Find Untracked Files
+
+```bash
+# Show untracked files
+git ls-files --others --exclude-standard
+```
+
+### Check File Status
+
+```bash
+# Detailed status of tracked vs untracked
+git status
+```
+
+Output categories:
+- **Untracked files**: Not in .gitignore, not tracked by git
+- **Changes not staged**: Files changed but not added
+- **Changes to be committed**: Staged files ready to commit
+
+### Example Workflow to Find and Remove Sensitive Files
+
+```bash
+# 1. List files in k8s directory to see what's tracked
+git ls-files k8s/
+
+# 2. Remove specific file from tracking
+git rm --cached k8s/secret.yaml
+
+# 3. Verify it's removed from staging area
+git status
+
+# 4. Stage the .gitignore update
+git add .gitignore
+
+# 5. Commit and push
+git commit -m "Remove k8s/secret.yaml from tracking"
+git push origin main
+```
+
+### Remove Multiple Files at Once
+
+```bash
+# Remove several sensitive files
+git rm --cached .env k8s/secret.yaml credentials.json
+
+# Or use pattern matching
+git rm --cached 'k8s/*secret*'
+
+# Then commit
+git add .gitignore
+git commit -m "Remove sensitive files from git tracking"
+git push origin main
+```
+
 ## Essential Commands Quick Reference
 
 | Command | Purpose |
