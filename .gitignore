@@ -48,6 +48,9 @@ env/
 *.sublime-workspace
 
 # OS
+
+# Kubernetes Secrets (DO NOT COMMIT)
+k8s/secret.yaml
 .DS_Store
 Thumbs.db
 *.log
